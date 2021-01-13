@@ -1,0 +1,36 @@
+Packaging condition=Plastic
+
+
+ data                           Mean         Std.Dev
+
+ ----------------------------   --------     --------
+
+ 7.66  6.98  7.80               7.48         0.44
+
+Packaging condition=Vacuum
+
+
+ data                           Mean         Std.Dev
+
+ ----------------------------   --------     --------
+
+ 5.26  5.44  5.80               5.50         0.27
+
+Packaging condition=Mixed
+
+
+ data                           Mean         Std.Dev
+
+ ----------------------------   --------     --------
+
+ 7.41  7.33  7.04               7.26         0.19
+
+Packaging condition=Co2
+
+
+ data                           Mean         Std.Dev
+
+ ----------------------------   --------     --------
+
+ 3.51  2.91  3.66               3.36         0.40
+

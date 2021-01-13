@@ -1,0 +1,5 @@
+Plastic   7.66  Plastic   6.98  Plastic   7.80
+Vacuum    5.26  Vacuum    5.44  Vacuum    5.80
+Mixed     7.41  Mixed     7.33  Mixed     7.04
+Co2       3.51  Co2       2.91  Co2       3.66
+
