@@ -1,0 +1,255 @@
+---
+title: "STA567 TakehomeExam"
+author: "Lina Lee"
+date: "10/8/2019"
+output: word_document
+---
+```{r,include=FALSE}
+library(tidyverse)
+library(caret)
+setwd("C:/Users/linal/Desktop/Miami2019/STA567/Homework/TakeHomeExam/midterm")
+# Load in the sample using the load function
+load("TakehomeExamDatasets.Rdata")
+```
+
+# Task1
+# KNN classification
+```{r knn, cache=T}
+set.seed(12345)
+landmod_knn <- train(Class~ ., 
+                  data=land_sat, 
+                  method="knn",
+                  preProcess=c("center","scale"),
+                  tuneGrid=expand.grid(k=seq(1,15,1)),
+                  trControl = trainControl(method="cv",number = 5))
+# result of KNN classification
+landmod_knn$results
+
+# Give the predictive Accuracy of model
+max(landmod_knn$results$Accuracy)
+```
+# LDA classification
+```{r LDA,cache=T}
+set.seed(12345)
+landmod_lda <- train(Class~ ., 
+                  data=land_sat, 
+                  method="lda",
+                  preProcess=c("center","scale"),
+                  metric="Accuracy",
+                  trControl = trainControl(method="cv",number = 5))
+
+# result of LDA
+landmod_lda$results
+# Give the predictive Accuracy of model
+landmod_lda$results$Accuracy
+
+
+```
+# QDA classification
+```{r qda,cache=T}
+set.seed(12345)
+landmod_qda <- train(Class~ ., 
+                  data=land_sat, 
+                  method="qda",
+                  preProcess=c("center","scale"),
+                  trControl = trainControl(method="cv",number = 5))
+
+
+# result of QDA
+landmod_qda$results
+# Give the predictive Accuracy of model
+landmod_qda$results$Accuracy
+```
+
+# Logit regression
+```{r logit, cache=T}
+set.seed(12345)
+landmod_logit <- train(Class~ ., 
+                     data=land_sat, 
+                     method="glm",family="binomial",
+                     preProcess=c("center","scale"),
+                     trControl = trainControl(method="cv",number = 5))
+
+
+# Give the predictive Accuracy of model
+landmod_logit$results$Accuracy
+```
+
+
+
+# KNN (k=7) classification model has the highest model accuracy as 0.9944
+Since response variable “Class” is a qualitative variable, I tried four types of models including KNN, LDA, QDA, and logistic classification. In KNN classification, sequence from 5 to 23 by 2 was applied into K, there were not parameters for the other models (LDA, QDA, and logistic). For each k-nearest neiborhood model, accuracy was calculated, and the model which has maximum accuracy was selected as final. I fitted the model using train function with method=“method name”. The train function calculated the accuracy of each model by applying 5th fold Cross Validation. I compared the accuracy for each model to find best predictive model. (Accuracy is the percentage of correctly classifies instances out of all instances.) The accuracy for each model is displayed on the table as follows
+
+Model | Accuracy 
+------| ------------- 
+KNN(k=11) | 0.9947 
+LDA | 0.9863235 
+QDA | 0.9692299 
+Logistic|0.9866338
+
+KNN calssification model (k=11) has the highest accuracy. Therefore, the KNN model(K=11) best predicts the Class for the satellite images (cotton crop or soil) using the Sp11, Sp12, . . . , Sp49 variables in the land_sat dataset since it has the highest accuracy.  
+
+# reference
+*https://machinelearningmastery.com/machine-learning-evaluation-metrics-in-r/*
+
+
+
+# Task2
+```{r data cleaning}
+# Remove missing values
+gaming<-gaming[!(gaming$Age=="?"),]
+gaming<-gaming[!(gaming$HoursPerWeek=="?"),]
+gaming<-gaming[!(gaming$TotalHours=="?"),]
+
+# mutate factor variables into numeric variables
+gaming <- gaming %>%
+mutate(Age=as.numeric(Age),HoursPerWeek=as.numeric(HoursPerWeek),TotalHours=as.numeric(TotalHours))
+```
+# MLR
+```{r MLR}
+# Backward Stepwise Regression from AIC
+gaming_mod <- lm(APM~. ,data=gaming)
+stepBackward <- step(gaming_mod)
+stepBackward
+
+# Cross Validation
+set.seed(12345)
+gaming_mlr <- train(APM~. , 
+              data=gaming,
+              method="lm",
+              trControl=trainControl(method="cv",number = 5),
+              preProcess = c("center", "scale"))
+
+
+
+# RMSE calculated from 5th-fold cross validation
+min(gaming_mlr$results$RMSE) 
+min(gaming_mlr$results$MSE) 
+```
+# KNN regression
+```{r knn reg ,cache=T,,warning=FALSE,message=FALSE,error=FALSE}
+set.seed(12345)
+gaming_knn <- train(APM~. , 
+                     data=gaming, 
+                     method="knn",
+                     preProcess=c("center","scale"),
+                     tuneGrid=expand.grid(k=seq(1,50,1)),
+                     trControl = trainControl(method="cv",number = 5))
+
+
+
+# Tuning parameter of the final KNN regression
+gaming_knn$bestTune
+# RMSE of the final model calculated from 5th-fold cross validation
+min(gaming_knn$results$RMSE)
+min(gaming_knn$results$MSE)
+```
+
+# lasso regression
+```{r lasso,cache=T,,warning=FALSE,message=FALSE,error=FALSE}
+set.seed(12345)
+gaming_lasso<-train(APM~. , 
+                    data=gaming,
+                    method="glmnet",
+                    preProcess = c("center","scale"),
+                    tuneGrid=expand.grid(alpha=0,lambda=seq(0,5,0.5))
+                    )
+
+# str(gaming_lasso)
+# Tuning parameter of the final lasso model
+gaming_lasso$bestTune
+# RMSE of the final lasso model calculated from 5th-fold cross validation
+min(gaming_lasso$results$RMSE)
+min(gaming_lasso$results$MSE)
+```
+
+# ridge regression
+```{r ridge,cache=T}
+set.seed(12345)
+gaming_ridge<-train(APM~. , 
+                    data=gaming,
+                    method="glmnet",
+                    trControl=trainControl(method="cv",number=5),
+                    preProcess = c("center","scale"),
+                    tuneGrid=expand.grid(alpha=1,lambda=seq(0,5,0.1))
+)
+
+
+# Tuning parameter
+gaming_ridge$bestTune
+# RMSE calculated from 5th-fold cross validation
+min(gaming_ridge$results$RMSE)
+min(gaming_ridge$results$MSE)
+```
+
+
+# Enet 
+```{r enet, cache=T}
+### elastic net
+set.seed(12345)
+gam_mod_enet <- train(APM~ ., 
+                   data=gaming,
+                   method="glmnet",
+                   trControl=trainControl(method="cv"),
+                   preProcess = c("center", "scale"),
+                   tuneLength=20)
+# Tuning parameter
+gam_mod_enet$bestTune
+# RMSE calculated from 5th-fold cross validation
+min(gam_mod_enet$results$RMSE)
+min(gam_mod_enet$results$MSE)
+```
+
+# pcr
+```{r pcr,cache=T}
+set.seed(12345)
+gaming_pcr <- train(APM~ ., 
+                   data=gaming, 
+                   method="pcr",
+                   preProcess=c("center","scale"),
+                   trControl = trainControl(method="cv"),
+                   tuneGrid = data.frame(ncomp=1:13))
+
+
+
+# Tuning parameter
+gaming_pcr$bestTune
+# RMSE calculated from 5th-fold cross validation
+min(gaming_pcr$results$RMSE)
+min(gaming_pcr$results$MSE)
+```
+
+# plsr 
+```{r plsr,cache=T}
+set.seed(12345)
+gaming_plsr <- train(APM~ ., 
+                   data=gaming, 
+                   method="pls",
+                   preProcess=c("center","scale"),
+                   trControl = trainControl(method="cv"),
+                   tuneGrid = data.frame(ncomp=1:13))
+
+# Tuning parameter
+gaming_plsr$bestTune
+# RMSE calculated from 5th-fold cross validation
+min(gaming_plsr$results$RMSE)
+min(gaming_plsr$results$MSE)
+```
+
+  
+ Since response is quantitative variable, I tried Multivariate linear regression (MLR), K-Nearest Neiborhood regression, Lasso, Ridge, Elastic net(Enet), Principal Component(PCR), and partial Least Squre regression(PLSR). Before fitting MLR, I selected variables using backward stepwise approach. The selected model for MLR are APM ~ Age + SelectByHotkeys + MinimapAttacks + MinimapRightClicks + NumberOfPACs + ActionLatency + ActionsInPAC + TotalMapExplored + WorkersMade. In KNN regression, I applied sequence from 1 to 10 by 1 into k. For each k-nearest neiborhood model, RMSE was calculated, and the model which has minimum RMSE was selected as final. In Lasso, alpha is 0, and sequence from 0 to 5 by 0.1 were used for lambda. For ridge, alpha is 1, and sequence from 0 to 5 by 0.1 were applied into lambda. In both PCR and PLSR, 1 to 13 number of components were tried because the number of component should be lower than the number of variables (14 in this case)In each type of model, different tuning parameters provided different RMSE. Among them, the model which has the minimum RMSE was chosen as final model. Finally, I compared RMSE to find best predictive model. The tuning parameters and RMSE for each model are displayed on the table below.
+  
+  Model | Tuning Parameter     | RMSE 
+--------| ---------------------|------
+ MRL    |                      |8.0789
+KNN(k=7)|       k=8            |15.2849
+lasso   |    lambda=3.1        |8.9127
+  ridge |    lambda=0.1        |8.0800
+  enet  | alpha=1, lambda=0.29 |8.0125
+  PCR   |      ncomp=13        |8.01018
+  PLSR  |      ncomp=10        |8.01017
+  
+
+Partial least squares regression has the lowest RMSE as 8.01017, and Principal component regression has second lowest RMSE as 8.01018, which is almost similar with that of PCR. Therefore, I think both PLSR and PCR models best predict the APM for the gaming records in the gaming using all other numeric variables in the gaming dataset.
+
+  

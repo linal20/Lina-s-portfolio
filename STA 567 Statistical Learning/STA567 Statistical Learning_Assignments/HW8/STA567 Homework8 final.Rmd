@@ -1,0 +1,213 @@
+---
+title: "STA567 homework 8"
+author: "Lina Lee"
+date: "11/26/2019"
+output: word_document
+---
+```{r ,include=FALSE}
+library(pdfCluster)
+library(GGally)
+```
+# Problem 1 
+# What do the factor loadings, scree plot and biplot tell you about the eight dimensions of numeric information from the olive oils?
+
+### Load data for accessing
+```{r}
+data("oliveoil")
+head(oliveoil)
+sub_olive<-oliveoil[,3:10]
+olive_scaled <- scale(sub_olive)
+olive_scaled<-as.data.frame(olive_scaled)
+```
+
+
+
+# (1) Loadings (eigenvectors)
+```{r}
+olive_pca <- princomp(~ . , data=sub_olive, cor=TRUE)
+olive_pca$loadings
+```
+
+-The loading vectors for the first principal component deﬁnes a direction in feature space along which the data vary the most. The direction of the vectors in biplot is determined by the sign of the associated eigenvector(loadings) sign, and the magnitude is based on the eigenvector value.(from ISL text book)
+
+-From the loadings table, We see the loadings of the first component is comprised of a linear combination of all the acids except stearic acid. palmitic,palmitoleic, and olic weighted about 0.45, linoleic,linolenic, arachidic, and eicosenoic weighted less. oleic has negative sign, which we can see the vector of oleic headed negative in the biplot below.
+
+-The loadings of the second component is a linear combination of all the acids that has maximal variance out of all linear combinations that are uncorrelated with the first principal component. The second principal component is comprise of all the acids except palmitic. Palmitoleic and linoleic have positive signs, and stearic,oleic,linolenic,arachidic,and eicosenoic acids have negative signs. linolenic acid weighted most as about -0.6. linoleic, arachidic, and eicosenoic acids weighted more than palmitoleic,stearic,oleic. Oleic acid weighted least.
+
+### get data into data frames
+```{r}
+component_loadings <- as.data.frame(olive_pca$loadings[1:8,1:8])
+component_loadings$var <- row.names(component_loadings)
+olive_scores <- as.data.frame(olive_pca$scores)
+olive_scores$oliveoil <- row.names(olive_scores)
+```
+
+# (2) Screeplot
+
+```{r}
+# pull off eigenvalues to plot PVE 
+olive_pca$sdev
+scree_data <- data.frame(comp=1:8,
+                         PVE=olive_pca$sdev^2/sum(olive_pca$sdev^2),
+                         cumulative_PVE = cumsum(olive_pca$sdev^2/sum(olive_pca$sdev^2)))
+# build plot
+ggplot()+
+  geom_point(aes(x=comp,y=PVE),size=2, data=scree_data)+
+  geom_line(aes(x=comp,y=PVE), data=scree_data) +
+  annotate(geom="text",x=5,y=.08,label="Elbow",hjust=0)+
+  labs(x="Principal Components",
+       title="Screeplot for oliveoil PCA")+
+  scale_x_continuous(breaks=1:8)+
+  theme_bw() + theme(panel.grid.minor.x = element_blank())
+```
+
+
+```{r}
+ggplot()+
+  geom_point(aes(x=comp,y=cumulative_PVE),size=2, data=scree_data)+
+  geom_line(aes(x=comp,y=cumulative_PVE), data=scree_data) +
+  annotate(geom="text",x=5,y=.08,label="Elbow",hjust=0)+
+  labs(x="Principal Components",
+       title="Cumulative Screeplot for oliveoil PCA")+
+  scale_x_continuous(breaks=1:8)+
+  theme_bw() + theme(panel.grid.minor.x = element_blank())
+```
+
+-From the scree plot, we see that the first component explains about 50 percent of variability. The first, second, third principal components explains about 80 percent of variability. The principal components 4-8 does not appear to explain variability much.
+
+
+# (3) Biplots
+```{r}
+ggplot()+
+  geom_text(aes(x=Comp.1/8,y=Comp.2/8, label=oliveoil), color="black",
+            data=olive_scores) +
+  geom_segment(x=0,y=0,aes(xend=Comp.1,yend=Comp.2),color="red",
+               data=component_loadings, arrow=arrow(angle=30))+
+  geom_text(aes(x=Comp.1,y=Comp.2, label=var), color="red",
+            data=component_loadings)+
+  labs(x="Principal Component 1", 
+       y="Principal Component 2",
+       title="Biplot for oliveoil PCA")+
+  theme_bw()
+```
+
+-From the biplot, we can observe that, on the Principal component1, linoleic,palmitoleic, palmitic, linolenic,arachidic, and eicosenoic acids headed positive. On the otherhand, oleic headed negative. Therefore, Principal component is a component which explains differences between two groups, one group includes linoleic,palmitoleic, palmitic, linolenic,arachidic, and the other group includes eicosenoic acids and oleic acid.
+
+-For the Principal component2, direction of linoleic,and palmitoleic acids are positive (palmitic is excluded from the loadings table), and Stearic, linolenic,arachidic, and eicosenoic acids headed negative. the Pincipal component 2 explains variability of those two groups.
+
+```{r}
+ggplot()+
+  geom_text(aes(x=Comp.1/8,y=Comp.3/8, label=oliveoil), color="black",
+            data=olive_scores) +
+  geom_segment(x=0,y=0,aes(xend=Comp.1,yend=Comp.3),color="red",
+               data=component_loadings, arrow=arrow(angle=30))+
+  geom_text(aes(x=Comp.1,y=Comp.3, label=var), color="red",
+            data=component_loadings)+
+  labs(x="Principal Component 1", 
+       y="Principal Component 3",
+       title="Biplot for oliveoil PCA")+
+  theme_bw()
+```
+
+### -------------------------------------------------------------------------------
+# Problem 2
+
+## 1) 3 macro-areas. 
+
+## k-means clustering
+
+```{r cache=TRUE}
+km.out <- kmeans(olive_scaled, 3)
+plotdat1 <- data.frame(cluster=as.factor(km.out$cluster),
+                      olive_scaled)
+
+
+
+ggscatmat(plotdat1, columns=2:9, color="cluster")
+```
+
+from the above matrix, we can observe some evidences of three clusters
+
+```{r, cache=TRUE}
+table(plotdat1$cluster,oliveoil$macro.area)
+```
+
+Clusters based on the k-means clustering, the cluster 1 and 3 lines up with South, and Cluster 2  seem to have trouble identifying clusters that would correspond with Sardinia and Centre.North. Overally, k-means clustering does not identify three macro areas within the data well. 
+ 
+
+
+
+## Create a hierarchical clustering of the same data
+
+```{r}
+hc.out <- hclust(dist(olive_scaled), method="centroid")
+plot(hc.out)
+```
+
+```{r}
+hc.out <- hclust(dist(olive_scaled), method="single")
+plot(hc.out)
+```
+
+From single and centroid hierarchical clusterings, it is difficutl to find three obvious clusters.
+
+```{r, cache=TRUE}
+hc.out_fi <- hclust(dist(olive_scaled), method="complete")
+plot(hc.out_fi)
+```
+
+```{r}
+plotdat2 <- data.frame(cluster=as.factor(cutree(hc.out_fi,3)),
+                      olive_scaled)
+table(plotdat2$cluster,oliveoil$macro.area)
+```
+
+-Clusters based on the hierarchical clustering with complete method,  cluster 3 perfectly lines up with Centre.North. Cluster 1 mostly lines up with Centre.North, but it seem to have trouble indentifying clusters that correspond with South or Centre.North. cluster 2 mostly lines up with South but it also seems to have trouble indentifying clusters that correspond with South and Sardinia. hierarchical clustering also does not align with three macro areas perfectly although it identify clusters that would correspond to three areas some extent. the hierarchical clustering seems to work better than k-means clustering in this case.
+
+
+
+### -------------------------------------------------------------------------------
+# 2) 9 regions
+
+## k-means clustering
+
+```{r, cache=TRUE}
+km.out3 <- kmeans(olive_scaled, 9)
+plotdat3 <- data.frame(cluster=as.factor(km.out3$cluster),
+                      olive_scaled)
+
+
+
+ggscatmat(plotdat3, columns=2:9, color="cluster")
+```
+
+since there were 9 clusters, it is difficult to see clear pattern about 9 clusters easily from the above chart.
+
+```{r, cache=TRUE}
+table(plotdat3$cluster,oliveoil$region)
+```
+
+-Cluster 1 lines up with Liguria.west, cluster2 lines up with Sardinia.coast. Cluster3 lines up with Liguria.east. Cluster4 lines up with Apulia.north. cluster5 lines up mostly with Apulia.south, cluster6 seems to have trouble identifying clusters that would corresponds to Calabria and Sicily. Cluster7 lines up with Umbria. Cluster8 seems to have trouble identifying clusters that would corresponds to Calabria, Apulia.south and Sicily. Cluster9 lines up withSardinia.inland.
+
+-Overally, k-means clustering seems to align with 9 regions well.
+
+## Create a hierarchical clustering of the same data
+
+```{r cache=TRUE}
+hc.out4 <- hclust(dist(olive_scaled), method="complete")
+plot(hc.out)
+```
+
+
+```{r, cache=TRUE}
+aligndat2 <- data.frame(cluster=as.factor(cutree(hc.out4,9)),
+                      olive_scaled)
+table(aligndat2$cluster,oliveoil$region)
+```
+
+-Cluster1 seems to have trouble identifying clusters that would correspond with Apulia.north,Liguria.east and Umbria.
+Cluster2 seems to have trouble identifying clusters that would correspond with Apulia.north and Sicily. Cluster3 also seems to have trouble identifying clusters that would correspond with Calabria, Apulia.south, Sardinia.inland, and Sardinia.coast
+Cluster4  seems to have trouble identifying clusters that would correspond with Calabria and Sicily.
+Cluster5 and  Cluster6 lines up with Apulia.south. Cluster7 lines up with Liguria.east. Cluster 8 seems to have trouble  identifying clusters that would corresponds with Liguria.east and Liguria.west. Cluster 9 only has one observation that corresponds with Liguria.east.
+
+-Overally, hierchical clustering seems not to align with 9 regions well.

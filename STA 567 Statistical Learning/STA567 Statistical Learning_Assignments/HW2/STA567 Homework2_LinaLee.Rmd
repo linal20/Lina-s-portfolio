@@ -1,0 +1,260 @@
+---
+title: "STA567 hw2"
+author: "Lina Lee"
+date: "9/16/2019"
+output: word_document
+---
+
+---
+title: "STA567 HW2"
+author: "Lina Lee"
+date: "9/16/2019"
+output: word_document
+---
+
+##Load libraries
+```{r,results='hide', include=FALSE}
+library(tidyverse)
+library(FNN)
+library(car)
+library(caret)
+```
+
+# Problem 2 
+```{r}
+knnData <- data.frame(X1 = c(21,19,16,21,21,17),
+                      X2 = c(25,43,36,47,42,37),
+                      Y = c(4,7,5,7,8,5))
+knnData
+```
+
+## Euclidean distance
+
+### create distance calculation function
+```{r}
+mydistance <- function(x11,x12,x21,x22){
+  sqrt((x11-x21)^2 + (x12-x22)^2)  
+}
+knnData$mydistance<-mydistance(knnData$X1,knnData$X2,20,45)
+knnData$mydistance
+```
+### Answer: 2.236068  2.236068  3.162278  8.544004  9.848858 20.024984
+
+
+## b)	What are the indeces for the k=3 nearest neighbors to the new data point? What about the indeces for the k=4 nearest neighbors?
+
+```{r}
+knnData<-knnData[order(knnData$mydistance)[1:6],]
+
+print(head(knnData,n=3))
+print(head(knnData,n=4))
+
+mean(knnData$Y[order(knnData$mydistance)[1:3]])  
+
+mean(knnData$Y[order(knnData$mydistance)[1:4]])  
+
+```
+Answer:7.333333
+Answer: 6.75
+
+
+# Problems 3 
+
+### Read Data from book website
+```{r}
+college <- read.csv("http://faculty.marshall.usc.edu/gareth-james/ISL/College.csv")
+
+college[college$X=="Miami University at Oxford", ]
+row.names(college) <- college$X
+college <- college[ , -1]
+
+
+college$Private <- as.factor(college$Private)
+
+```
+
+# Break into training and test data, DO NOT CHANGE THE SEED!
+```{r}
+set.seed(09162019)
+test_index <- sample(1:777, 277)
+test_data <- college[test_index,]
+train_data <- college[-test_index,]
+```
+
+
+```{r}
+library(leaps)
+
+
+n <- length(test_data$Grad.Rate)
+subset <- regsubsets(Grad.Rate ~.,
+                     method="exhaustive", nbest=1, data=test_data)
+cbind(summary(subset)$outmat, round(summary(subset)$rsq, 3),
+      round(summary(subset)$adjr2, 3), round(summary(subset)$cp, 1), round(sqrt(summary(subset)$rss/(n-c(rep(1:7,rep(2,7)),8)-1)), 4))
+
+```
+# (a)	A brief description of your model fitting procedure (2-3 sentences) 
+7th model, 8th and 9th model has the highest adj-R^2, which is lager than 0.44.However, the model 9 p=9 but Cp is 7.8, which does not satisfy Cp criterion. so I will exclude this model.The model 8 has higher adj-R^2 than the model 7. both model satisfy p<Cp criterion. RSS of the model 8 is lower than the model 7.
+
+
+# AIC/BIC approach
+```{r}
+model.7<-lm(Grad.Rate~Apps+Top25perc+P.Undergrad+Outstate+Room.Board+perc.alumni+Expend,data=test_data)
+k <- 7
+n*log(sum(residuals(model.7)^2))-n*log(n)+2*(k+1)
+n*log(sum(residuals(model.7)^2))-n*log(n)+log(n)*(k+1)
+```
+AIC= 1425.147, BIC=1454.139
+
+```{r}
+model.8<-lm(Grad.Rate~Apps+Top25perc+P.Undergrad+Outstate+Room.Board+Personal+perc.alumni+Expend,data=test_data)
+k<-8
+n*log(sum(residuals(model.7)^2))-n*log(n)+2*(k+1) 
+n*log(sum(residuals(model.7)^2))-n*log(n)+log(n)*(k+1)
+```
+AIC= 3974.047, BIC=4015.946
+
+# Multicolinearity check
+```{r}
+vif(model.7)
+vif(model.8)
+```
+vif of both model is not that big. Therefore, I will choose model 8, although AIC/BIC of it is a little bit larger than model 8.
+
+# (b)	A residual plot and statement about model fit. (1-2 sentences) ====
+```{r}
+model.7<-lm(Grad.Rate~Apps+Top25perc+P.Undergrad+Outstate+Room.Board+perc.alumni+Expend,data=test_data)
+```
+```{r}
+par(mfrow=c(2,2))
+plot(model.7)
+```
+
+#	(c)Calculate and report the R^(2 )for your model.====
+```{r}
+summary(model.7)$r.squared
+summary(model.7)$adj.r.squared
+```
+# (d)	Calculate and report the training and test MSE for the model. ====
+```{r}
+mod.train<-lm(Grad.Rate~Apps+Top25perc+P.Undergrad+Outstate+Room.Board+Personal+perc.alumni+Expend,data=train_data)
+train_data$pred <- predict(mod.train, train_data)
+traintMSE <- with(train_data, mean((Grad.Rate-pred)^2))
+traintMSE
+
+mod.test<-lm(Grad.Rate~Apps+Top25perc+P.Undergrad+Outstate+Room.Board+Personal+perc.alumni+Expend,data=test_data)
+test_data$pred <- predict(model.8, test_data)
+
+testMSE <- with(test_data, mean((Grad.Rate-pred)^2))
+testMSE
+```
+
+# Problems 4 
+Standardize all numeric input variables for kNN regression of Grad.Rate
+```{r}
+college[,-c(1,18)] <- as.data.frame(scale(college[,-c(1,18)]))
+set.seed(09162019)
+test_index <- sample(1:777, 277)
+knnreg_test_data <- college[test_index,]
+knnreg_train_data <- college[-test_index,]
+
+
+knnreg1<-knnreg(Grad.Rate~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+                +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend,data=knnreg_train_data,k=1)
+knnreg_test_data$pred1 <- predict(knnreg1, knnreg_test_data)
+knnreg_train_data$pred1 <- predict(knnreg1, knnreg_train_data)
+
+testMSE1 <- with(knnreg_test_data, mean((Grad.Rate-pred1)^2))
+trainMSE1 <- with(knnreg_train_data, mean((Grad.Rate-pred1)^2))
+testMSE1
+trainMSE1 
+
+
+knnreg2<-knnreg(Grad.Rate~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+                +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend
+                 ,data=knnreg_train_data,k=20)
+
+knnreg_test_data$pred2 <- predict(knnreg2, knnreg_test_data)
+knnreg_train_data$pred2 <- predict(knnreg2, knnreg_train_data)
+
+
+testMSE2 <- with(knnreg_test_data, mean((Grad.Rate-pred2)^2))
+trainMSE2 <- with(knnreg_train_data, mean((Grad.Rate-pred2)^2))
+testMSE2
+trainMSE2
+
+
+knnreg3<-knnreg(Grad.Rate~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+                +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend
+                ,data=knnreg_train_data,k=50)
+knnreg_test_data$pred3 <- predict(knnreg3, knnreg_test_data)
+knnreg_train_data$pred3 <- predict(knnreg3, knnreg_train_data)
+
+testMSE3 <- with(knnreg_test_data, mean((Grad.Rate-pred3)^2))
+trainMSE3 <- with(knnreg_train_data, mean((Grad.Rate-pred3)^2))
+testMSE3
+trainMSE3
+```
+
+
+# Problems 5
+Standardize all numeric input variables for kNN classification of Private (Yes/No)
+
+```{r}
+
+college[,-1] <- as.data.frame(scale(college[,-1]))
+set.seed(09162019)
+test_index <- sample(1:777, 277)
+knn_test_data <- college[test_index,]
+knn_train_data <- college[-test_index,]
+
+
+
+pknn1<- knn3(Private~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+                   +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend+Grad.Rate
+                   ,knn_train_data,k=1)
+
+test_misclass1<-mean(predict(pknn1,knn_test_data, type="class") != knn_test_data$Private)
+test_misclass1
+train_misclass1<-mean(predict(pknn1,knn_train_data, type="class") != knn_train_data$Private)
+train_misclass1
+
+
+pknn20 <- knn3(Private~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+               +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend+Grad.Rate,data=knn_train_data,k=20)
+test_misclass20<-mean(predict(pknn20,knn_test_data, type="class") != knn_test_data$Private)
+test_misclass20
+train_misclass20<-mean(predict(pknn20,knn_train_data, type="class") != knn_train_data$Private)
+train_misclass20
+
+pknn50 <- knn3(Private~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+               +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend+Grad.Rate,data=knn_train_data,k=50)
+
+
+test_misclass50<-mean(predict(pknn50,knn_test_data, type="class") != knn_test_data$Private)
+test_misclass50
+train_misclass50<-mean(predict(pknn50,knn_train_data, type="class") != knn_train_data$Private)
+train_misclass50
+
+```
+# 6 logistic regression misspecification rate
+
+```{r}
+
+knn_train_data$binary <- ifelse(knn_train_data$Private=="Yes", 1, 0)
+knn_test_data$binary <- ifelse(knn_test_data$Private=="Yes", 1, 0)
+
+
+logitmod <- glm(binary~Apps+Accept+Enroll+Top10perc+Top25perc+F.Undergrad+P.Undergrad+Outstate+Room.Board+Books
+                +Personal+PhD+Terminal+S.F.Ratio+perc.alumni+Expend+Grad.Rate,
+                family = binomial(link=logit),
+                data=knn_train_data)
+
+
+# Model accuracy
+misrate1<-mean(ifelse(predict(logitmod,knn_train_data, type="response") > 0.5, "Yes", "No") != knn_train_data$Private)
+misrate1
+
+misrate2<-mean(ifelse(predict(logitmod,knn_test_data, type="response") > 0.5, "Yes", "No") != knn_test_data$Private)
+misrate2
+```

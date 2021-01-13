@@ -1,0 +1,484 @@
+---
+title: "STA567 HW4"
+author: "Lina Lee"
+date: "10/4/2019"
+output: word_document
+---
+
+```{r,results='hide'}
+
+setwd("C:\\Users\\linal\\Desktop\\Miami2019\\STA567\\Homework\\Homework4")
+load(file="Decathlons.Rdata")
+head(london)
+
+# 100m run, long jump, shotput, high jump  and 400m run
+# x100m long shotput high x400m
+# x110m x1500m
+# London-trained
+```
+
+```{r,results='hide'}
+library(tidyverse)
+library(caret)
+```
+
+# Remove missing values
+```{r}
+london <- london %>%
+  select(x110m, x1500m, x100m, long, shotput, high, x400m) %>%
+  filter(!is.na(x110m)) %>%
+  filter(!is.na(x1500m)) 
+```
+
+
+# (1) Backward Stepwise Regression from AIC
+## Model for 110m hurdles
+```{r}
+# Backward Stepwise
+mod1 <- lm(x110m ~ .-x1500m,data=london)
+stepBackward <- step(mod1)
+stepBackward
+
+# Cross Validation 
+set.seed(12345)
+mlr1 <- train(x110m ~ x100m + long + shotput + high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+
+
+# RMSE for 5th-fold cross validation
+min(mlr1$results$RMSE)  
+```
+
+## Model for 1500m run
+```{r}
+# Backward Stepwise Regression from AIC
+mod2 <- lm(x1500m ~ .-x110m,data=london)
+stepBackward <- step(mod2)
+stepBackward
+
+# Cross Validation
+set.seed(12345)
+mlr2 <- train(x1500m ~ x100m + long + shotput + x400m, 
+              data=london,
+              method="lm",
+              trControl=trainControl(method="cv",number = 5),
+              preProcess = c("center", "scale"))
+
+# RMSE for 5th-fold cross validation
+min(mlr2$results$RMSE) 
+```
+
+# (2) Lasso regression 
+## Model for 110m hurdles
+```{r}
+# Set seed for reproducibility
+set.seed(12345)
+# Train the model
+lasso_mod1<-train(x110m ~ .-x1500m , 
+                 data=london,
+                 method="lasso",
+                 # Set up repeated k-fold cross-validation
+                 trControl=trainControl(method="cv",number=5),
+                 preProcess = c("center","scale"),
+                 tuneLength=20)
+
+lasso_mod1$bestTune
+mean(lasso_mod1$resample$RMSE)
+```
+
+## Model for 1500m run
+```{r}
+### x1500m
+set.seed(12345)
+lasso_mod2<-train(x1500m ~ .-x110m , 
+                 data=london,
+                 method="lasso",
+                 trControl=trainControl(method="cv",number=5),
+                 preProcess = c("center", "scale"),
+                 tuneLength=20)
+
+lasso_mod2$bestTune
+mean(lasso_mod2$resample$RMSE)
+```
+
+# (3) Rigde regression
+## Model for 110m hurdles
+```{r}
+set.seed(12345)
+ridge_mod1 <- train(x110m ~ .-x1500m , 
+                   data=london,
+                   method="ridge",
+                   trControl=trainControl(method="cv",number = 5),
+                   preProcess = c("center", "scale"),
+                   tuneLength=20)
+
+ridge_mod1$bestTune
+min(ridge_mod1$results$RMSE)
+```
+
+
+## Model for 1500m run
+```{r}
+set.seed(12345)
+ridge_mod2 <- train(x1500m ~ .-x110m , 
+                    data=london,
+                    method="ridge",
+                    trControl=trainControl(method="cv",number = 5),
+                    preProcess = c("center", "scale"),
+                    tuneLength=20)
+
+
+# depending on the model, criteria to choose bestTUne is different? not RMSE?? 
+ridge_mod2$bestTune
+min(ridge_mod2$results$RMSE)
+```
+
+
+
+# (4) elastic net 
+## Model for 110m hurdles
+```{r}
+set.seed(12345)
+enet_mod1 <- train(x110m ~ .-x1500m , 
+                  data=london,
+                  method="enet",
+                  trControl=trainControl(method="cv",number = 5),
+                  preProcess = c("center", "scale"),
+                  tuneLength=20)
+
+enet_mod1$bestTune
+min(enet_mod1$results$RMSE)
+```
+
+
+## Model for 1500m run
+```{r}
+set.seed(12345)
+enet_mod2 <- train(x1500m ~ .-x110m , 
+                   data=london,
+                   method="enet",
+                   trControl=trainControl(method="cv",number = 5),
+                   preProcess = c("center", "scale"),
+                   tuneLength=20)
+
+enet_mod2$bestTune
+min(enet_mod2$results$RMSE)
+```
+
+
+# (5) Principal Component Regression
+## Model for 110m hurdles
+```{r}
+set.seed(12345)
+pcr_mod1 <- train(x110m ~ .-x1500m, 
+                 data=london, 
+                 method="pcr",
+                 preProcess=c("center","scale"),
+                 trControl = trainControl(method="cv",number = 5),
+                 tuneGrid = data.frame(ncomp=1:6))
+
+
+pcr_mod1
+pcr_mod1$bestTune
+min(pcr_mod1$results$RMSE)
+```
+
+
+## Model for 1500m run
+```{r}
+set.seed(12345)
+pcr_mod2 <- train(x1500m ~ .-x110m, 
+                 data=london, 
+                 method="pcr",
+                 preProcess=c("center","scale"),
+                 trControl = trainControl(method="cv",number = 5),
+                 tuneGrid = data.frame(ncomp=1:6))
+
+pcr_mod2$bestTune
+min(pcr_mod2$results$RMSE)
+```
+
+
+
+
+# (6) Partial Least Squares Regression
+## Model for 110m hurdles
+```{r}
+set.seed(12345)
+plsr_mod1 <- train(x110m ~ .-x1500m, 
+                  data=london, 
+                  method="pls",
+                  preProcess=c("center","scale"),
+                  trControl = trainControl(method="cv"),
+                  tuneGrid = data.frame(ncomp=1:6))
+
+
+plsr_mod1$bestTune
+min(plsr_mod1$results$RMSE)
+```
+
+## Model for 1500m run
+```{r}
+set.seed(12345)
+plsr_mod1 <- train(x1500m ~ .-x110m, 
+                  data=london, 
+                  method="pls",
+                  preProcess=c("center","scale"),
+                  trControl = trainControl(method="cv"),
+                  tuneGrid = data.frame(ncomp=1:6))
+
+
+plsr_mod1$bestTune
+min(plsr_mod1$results$RMSE)
+```
+
+
+# (7) Backward Stepwise Regression from RMSE 
+### full model
+```{r}
+set.seed(12345)
+mod <- train(x110m ~ x100m+ long+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+min(mod$results$RMSE)
+```
+
+### STEP1 
+### Drop one variable from the full model
+```{r}
+set.seed(12345)
+mod1 <- train(x110m ~ x100m+ long+ shotput+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE1<-min(mod1$results$RMSE)  
+
+set.seed(12345)
+mod2 <- train(x110m ~ x100m+ long+ shotput+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2<-min(mod2$results$RMSE)  
+
+set.seed(12345)
+mod3 <- train(x110m ~ x100m+ long+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE3<-min(mod3$results$RMSE)  
+
+set.seed(12345)
+mod4 <- train(x110m ~ x100m+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))          
+            
+RMSE4<-min(mod4$results$RMSE)  
+
+set.seed(12345)
+mod5 <- train(x110m ~ long+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE5<-min(mod5$results$RMSE) 
+
+RMSE_list<-c(RMSE1,RMSE2,RMSE3,RMSE4,RMSE5)
+RMSE_list
+min(RMSE_list)
+```
+
+*mod 1 has least RMSE 0.4322. Now our improved model is lm(x110m ~ x100m+ long+ shotput+ high)*
+
+
+### STEP2
+### Drop one variable from the improved model from STEP1.
+```{r}
+set.seed(12345)
+mod2_1 <- train(x110m ~ x100m+ long+ shotput, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_1<-min(mod2_1 $results$RMSE)  
+
+set.seed(12345)
+mod2_2 <- train(x110m ~ x100m+ long+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_2<-min(mod2_2$results$RMSE)  
+
+set.seed(12345)
+mod2_3 <- train(x110m ~ x100m+ shotput+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_3<-min(mod2_3$results$RMSE)  
+
+set.seed(12345)
+mod2_4 <- train(x110m ~ long+ shotput+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_4<-min(mod2_4$results$RMSE)  
+
+RMSE2_list<-c(RMSE2_1,RMSE2_2,RMSE2_3,RMSE2_4)
+RMSE2_list
+min(RMSE2_list)
+```
+The second model lm(x110m ~ x100m+ long+ high) in step2 has the least RMSE as 0.4233. So, our improved model is lm(x110m ~ x100m+ long+ high).
+
+### STEP3
+### Drop one variable from the improved model from STEP2.
+```{r}
+set.seed(12345)
+mod3_1 <- train(x110m ~ x100m+ long, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE3_1<-min(mod3_1$results$RMSE)  
+
+set.seed(12345)
+mod3_2 <- train(x110m ~ x100m+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE3_2<-min(mod3_2$results$RMSE)  
+
+set.seed(12345)
+mod3_3 <- train(x110m ~long+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE3_3<-min(mod3_3$results$RMSE)  
+
+RMSE3_list<-c(RMSE3_1,RMSE3_2,RMSE3_3)
+RMSE3_list
+min(RMSE3_list)
+```
+
+*All of the model in step3 has larger RMSE than the RMSE of the final model in step2,(lm(x110m ~ x100m+ long+ high)). Therefore, our final model is lm(x110m ~ x100m+ long+ high), and RMSE is 0.4233.*
+
+### 1500m
+
+### full model
+```{r}
+set.seed(12345)
+mod <- train(x1500m ~ x100m+ long+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+min(mod$results$RMSE)
+```
+
+### STEP1 
+### Drop one variable from the full model
+```{r}
+set.seed(12345)
+mod1 <- train(x1500m ~ x100m+ long+ shotput+ high, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE1<-min(mod1$results$RMSE)  
+
+set.seed(12345)
+mod2 <- train(x1500m ~ x100m+ long+ shotput+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2<-min(mod2$results$RMSE)  
+
+set.seed(12345)
+mod3 <- train(x1500m ~ x100m+ long+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE3<-min(mod3$results$RMSE)  
+
+set.seed(12345)
+mod4 <- train(x1500m ~ x100m+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))          
+            
+RMSE4<-min(mod4$results$RMSE)  
+
+set.seed(12345)
+mod5 <- train(x1500m ~ long+ shotput+ high+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE5<-min(mod5$results$RMSE) 
+
+
+RMSE_list<-c(RMSE1,RMSE2,RMSE3,RMSE4,RMSE5)
+RMSE_list
+min(RMSE_list)
+```
+
+*mod 2 has least RMSE 12.003. Now our improved model is lm(x1500m ~ x100m+ long+ shotput+ x400m)*
+
+
+### STEP2
+### Drop one variable from the improved model from STEP1.
+```{r}
+set.seed(12345)
+mod2_1 <- train(x1500m ~ x100m+ long+ shotput, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_1<-min(mod2_1 $results$RMSE)  
+
+set.seed(12345)
+mod2_2 <- train(x1500m ~ x100m+ long+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_2<-min(mod2_2$results$RMSE)  
+
+set.seed(12345)
+mod2_3 <- train(x1500m ~ x100m+ shotput+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_3<-min(mod2_3$results$RMSE)  
+
+set.seed(12345)
+mod2_4 <- train(x1500m ~ long+ shotput+ x400m, 
+             data=london,
+             method="lm",
+             trControl=trainControl(method="cv",number = 5),
+             preProcess = c("center", "scale"))
+RMSE2_4<-min(mod2_4$results$RMSE)  
+
+RMSE2_list<-c(RMSE2_1,RMSE2_2,RMSE2_3,RMSE2_4)
+RMSE2_list
+min(RMSE2_list)
+```
+
+*All of the model in step2 has larger RMSE than the RMSE of the first model(lm(x1500m ~ x100m+ long+ shotput+ x400m)). Therefore, our final model is lm(x1500m ~ x100m+ long+ shotput+ x400m), and RMSE is 12.003*

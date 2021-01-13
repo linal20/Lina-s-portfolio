@@ -1,0 +1,171 @@
+---
+title:  "STA567 Homework7"
+author: "Lina Lee"
+date: "11/9/2019"
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r,include=FALSE}
+# Load the library
+library(pdfCluster)
+library(caret)
+# Load data for accessing
+data("oliveoil")
+```
+
+# Using 10-fold cross validation, fit and tune a support vector classifier for predicting the region of each oil sample.
+```{r}
+tc <- trainControl("repeatedcv", number=10, repeats=10)
+```
+# SVC linear kernal
+```{r ,cache=TRUE}
+svc_linear_oliveoil <- train(region ~ ., 
+                            data=oliveoil,
+                            method="svmLinear",
+                            trControl=tc,
+                            tuneGrid=data.frame(C=c(1,10,50,100)))
+
+svc_linear_oliveoil$results[which.max(svc_linear_oliveoil$results$Accuracy),]
+```
+## Further investigate the tunring parameter
+```{r ,cache=TRUE}
+svc_linear_oliveoil2 <- train(region ~ ., 
+                            data=oliveoil,
+                            method="svmLinear",
+                            trControl=tc,
+                            tuneGrid=data.frame(C=c(0.5,1,3,5)))
+
+svc_linear_oliveoil2$results[which.max(svc_linear_oliveoil2$results$Accuracy),]
+# misclassification rate
+1-max(svc_linear_oliveoil2$results$Accuracy)
+```
+```{r}
+# fit the final model to make a confusion matrix below.
+svc_linear_final <- train(region ~ ., 
+                            data=oliveoil,
+                            method="svmLinear",
+                            tuneGrid=data.frame(C=1))
+
+```
+
+
+# SVC polynomial kernal
+```{r ,cache=TRUE}
+svc_poly_oliveoil <- train(region ~ ., 
+                          data=oliveoil,
+                          method="svmPoly",
+                          trControl=tc,
+                          tuneGrid=expand.grid(C=c(.1,1,10,100),
+                                               degree=2:4, scale=1))
+# The best Tune and corresponding Accuracy
+svc_poly_oliveoil$results[which.max(svc_poly_oliveoil$results$Accuracy),]
+```
+
+### Further investigate the tunring parameter
+```{r ,cache=TRUE}
+
+svc_poly_oliveoil2 <- train(region ~ ., 
+                          data=oliveoil,
+                          method="svmPoly",
+                          trControl=tc,
+                          tuneGrid=expand.grid(C=c(0.01,0.05,0.08,1),
+                                               degree=2:4, scale=1))
+
+svc_poly_oliveoil2$results[which.max(svc_poly_oliveoil2$results$Accuracy),]
+
+# The misclassification rate
+1-max(svc_poly_oliveoil$results$Accuracy)
+
+```
+```{r}
+# 0.05	2
+svc_poly_final <- train(region ~ ., 
+                          data=oliveoil,
+                          method="svmPoly",
+                          trControl=tc,
+                          tuneGrid=expand.grid(C=0.05,
+                                               degree=2, scale=1))
+
+
+```
+
+# SVC radial kernal
+```{r ,cache=TRUE}
+svc_rad_oliveoil <- train(region ~ ., 
+                         data=oliveoil,
+                         method="svmRadial",
+                         trControl=tc,
+                         tuneGrid=expand.grid(C=c(1,2,4,8,16,30),
+                         sigma=c(0.01,0.1,0.16,0.64,0.99)))
+# The best Tune and corresponding Accuracy
+svc_rad_oliveoil$results[which.max(svc_rad_oliveoil$results$Accuracy),]
+```
+
+## Further investigate the tunring parameter
+```{r,cache=TRUE}
+svc_rad_oliveoil2 <- train(region ~ ., 
+                         data=oliveoil,
+                         method="svmRadial",
+                         trControl=tc,
+                         tuneGrid=expand.grid(C=c(1,2,4,8,16),
+                         sigma=c(0.05,0.08,0.1,0.16,0.2,0.4)))
+# The best Tune and corresponding Accuracy
+svc_rad_oliveoil2$results[which.max(svc_rad_oliveoil2$results$Accuracy),]
+
+# The misclassification rate
+1-max(svc_rad_oliveoil$results$Accuracy)
+```
+
+```{r}
+svc_rad_final<- train(region ~ ., 
+                         data=oliveoil,
+                         method="svmRadial",
+                         trControl=tc,
+                         tuneGrid=expand.grid(C=2,
+                         sigma=0.1))
+
+```
+
+# Report any tuning parameters chosen, as well as the overall misclassification rate. 
+
+SVM classifier| Model Parameters      |Misclassification rate 
+--------------| ----------------------|------
+   Linear     |      C=1              |0.04110
+ Polynomial   |C=0.05,degree=2,scale=1|0.04132
+Radial Kernels|   C=9,sigma=0.08      |0.03787
+
+Among three classifier, Radial Kernels has lowest Misclassification rate. Therefore, the SVM with Radial Kernels perfromed best among the three classifiers. 
+
+# From the confusion matrix, are there some regions where the classifier performs particularly well?
+```{r}
+library(kableExtra)
+x <- subset(oliveoil, select=-region)
+y<- oliveoil$region
+pred_linear <- predict(svc_linear_final,x)
+
+linear_mat<-table(pred_linear,y)
+kable(linear_mat)
+```
+
+In the regions of Apulia.north,Sicily Sardinia.inland, Sardinia.coast, Liguria.west, Umbria, all the predicted region match with the actual region.
+the SVC Linear model perfroms well in the regions. 
+
+```{r}
+pred_poly<- predict(svc_poly_final,x)
+poly_mat<-table(pred_poly,y)
+kable(poly_mat)
+```
+
+In the regions of Sicily, Sardinia.inland, Sardinia.coast, Liguria.east, Liguria.west, Umbria, all the predicted region match with the actual regions.
+the SVC polynomial model perfroms well in the regions. 
+
+```{r}
+pred_rad<- predict(svc_rad_final,x)
+rad_mat<-table(pred_rad,y)
+kable(rad_mat)
+```
+
+In the regions of Apulia.north, Sicily, Sardinia.inland, Sardinia.coast, Liguria.east, Liguria.west, Umbria, all the predicted region match with the actual regions.the SVC radial kernel model perfroms well in thoese regions. 
