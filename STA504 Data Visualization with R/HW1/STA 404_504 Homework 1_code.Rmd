@@ -1,0 +1,113 @@
+---
+title: "HW1_visualization"
+author: "Lina Lee"
+date: "February 10, 2019"
+output: word_document
+---
+
+
+```{r}
+library(ggplot2)
+music <- read.csv("https://kmaurer.github.io/documents/data/shuffled_playlist.csv")
+```
+
+#1.
+#a.How many songs are in the data frame? A:178
+```{r}
+str(music)
+```
+#b.hat song has the highest "valence" score? A:For You Blue - Remastered
+```{r}
+music[which.max(music$valence),]
+```
+
+#c.What is the average energy for hip hop songs? A:0.6567
+
+```{r}
+library(tidyverse)
+music %>% 
+  group_by(genre) %>% 
+  summarise(average = mean(energy))
+```
+
+#d.What percentage of songs the data are by the artist Dessa? A:6.2%
+
+```{r}
+myTable <- data.frame( table(music$artist)) 
+myTable
+myTable$Prop<-prop.table( myTable$Freq ) 
+myTable
+```
+
+#2.Create a scatterplot of the relationship between the energy and tempo of songs. 
+#Describe in a few sentences what this display tells us about the relationship between the variables.
+```{r}
+ggplot()+geom_point(aes(x=energy,y=tempo), data=music)+labs(x="energy",y="tempo", 
+              title="The scatterplot of energay and tempo")
+```
+
+#A:The scatterplot does not show the explicit relationship between tempo and energy. Observations spread randomly across all range of tempo (0 to 200) and energy (0 to 1).
+
+Page Break
+
+#3.Create and describe a plot that tells us about the distribution of danceability in this playlist.
+
+```{r}
+ggplot()+geom_density(aes(x=danceability),adjust=1,data=music)+ labs(x="danceability", 
+              title="The distribution of danceability")
+```
+
+#A:The density(density of frequency of songs) on danceability between 0.5 and 0.6 is the higest, and the density decrease as the value of danceability is farther from the range (0.5,0,6). Therefore, the distribution of danceability is smoothed triangular shape.
+
+\newline
+
+#4. How do the tempo values differ by genre? Use a side-by-side style of plot to help tell a story of how they differ. Describe in a few sentences what this display tells us about the relationship between the variables. Why did you choose this type of display?
+
+```{r}
+ggplot()+
+  geom_boxplot(aes(x=genre, y=tempo), data=music) +
+  coord_flip()+
+  labs(x="genre", 
+       y="tempe",
+       title="The boxplot of songs' tempo by genre")
+```
+
+#A: I used the side by side boxplot to compare the distribution of tempo values by genre. The range of the distribution of classic rock's tempo is on the highest, ska has the second highest range. Moreover, these two distributions has smaller(narrower) range than pop and hiphop. Hiphop has the widest range. Median of ska is the largest among all of them, classic rock has the second largest median, and hiphop has third largest median. Hiphop has the smalllest minimum value.
+
+
+\newline
+
+
+#5.Create an additional plot of your choosing that tells an interesting story about the data. Describe this plot in a few sentences.
+
+```{r}
+ggplot()+geom_bar(aes(x=genre),data=music,stat="count")+ labs(x="genre", 
+       y="count",
+       title="Count of songs by genre")
+```
+
+#classic rock has the largest number of songs. The genre which has the second largest number of the songs is hiphop, and ska is the one having the smallest number of the songs. 
+
+```{r}
+ggplot()+geom_point(aes(x=loudness,y=energy), data=music)+labs(x="loudness", 
+       y="energy",
+       title="The scatterplot of energy and loudness")
+```
+
+#the scatter plot implies the linear relationship between energy and loudness. That is, more loud a song is, more energy a song has( This is not causal relationship. This implies only correlation).
+
+```{r}
+ggplot()+
+  geom_density(aes(x=energy,color=genre),size=2,
+               adjust=.1,data=music)+labs(x="energy", 
+       y="density",
+       title="density of energy by genre")
+```
+
+#Most of the songs of ska have a tendency to have higher energy than the others. The plot does not show explicit differences in the distribution of density on energy by genre among the other three.
+
+
+
+Referece
+I referred the code for number1 from https://stackoverflow.com/questions/19449615/how-to-extract-the-row-with-min-or-max-values,
+, http://r.789695.n4.nabble.com/Frequencies-proportions-amp-cumulative-proportions-td906623.html
